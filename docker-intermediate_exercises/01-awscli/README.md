@@ -1,3 +1,10 @@
+# Docker Hub
+
+https://hub.docker.com/r/carpio701021/trambo-training-awscli
+
+# Pull
+
+docker pull carpio701021/trambo-training-awscli
 
 # Usage
 
