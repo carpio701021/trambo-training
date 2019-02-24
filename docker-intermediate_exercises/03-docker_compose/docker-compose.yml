@@ -1,0 +1,22 @@
+version: '2'
+services:
+  pythonflask:
+    build: ./flask-redis-app
+    volumes:
+     - ./flask-redis-app:/app
+    depends_on:
+     - redis
+  redis:
+    image: redis
+  static-server:
+    image: nginx
+    volumes:
+      - ./static-server:/usr/share/nginx/html:ro
+  proxy-server:
+    build: ./proxy-server
+    ports:
+      - "80:80"
+    depends_on:
+      - pythonflask
+      - static-server
+    

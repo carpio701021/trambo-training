@@ -2,8 +2,6 @@ FROM gliderlabs/alpine:latest
 MAINTAINER Javier Carpio <example@example.com>
 LABEL Description="Exercise 2: Docker in Docker inception"
 
-# Install the magic wrapper.
-ADD ./wrapdocker /usr/local/bin/wrapdocker
 
 # Install Docker and dependencies
 RUN apk --update add \

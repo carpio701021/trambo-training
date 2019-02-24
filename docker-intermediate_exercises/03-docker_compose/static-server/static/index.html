@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>New member</h2>
+
+<form action="/api/new_member" method="POST">
+  First name:<br>
+  <input type="text" name="firstname">
+  <br>
+  Last name:<br>
+  <input type="text" name="lastname">
+
+  <input type="submit" value="Submit">
+</form>
+
+<h2>All members</h2>
+
+<table id="members_list" border=1 style="size:1">
+  <tr><td>First Name</td><td>Last Name</td></tr>
+</table>
+
+<script>
+
+const Http = new XMLHttpRequest();
+const url='/api/get_all_members';
+Http.open("GET", url);
+Http.send();
+Http.onreadystatechange=(e)=>{
+  if(Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+    var p = document.getElementById('members_list');
+    Object.keys(JSON.parse(Http.responseText)).forEach(function (element,index,array){
+      var member = JSON.parse(Http.responseText);
+      p.innerHTML = p.innerHTML + '<tr><td>' + member[element]['firstname'] + '</td><td>' + member[element]['lastname'] + '</td></tr>';
+    });
+    console.log(Http.responseText)
+  }
+}
+
+</script>
+
+</body>
+</html>
