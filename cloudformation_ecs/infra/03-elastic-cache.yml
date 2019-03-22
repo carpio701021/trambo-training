@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Set up of Redis on Elastic Cache
+
+Resources:
+
+  SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group for Elastic Cache
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 6379
+          ToPort: 6379
+          IpProtocol: tcp
+      VpcId: !ImportValue 'VPC'
+
+  SubnetGroup:
+    Type: 'AWS::ElastiCache::SubnetGroup'
+    Properties:
+      Description: Subnet Group for Example Elastic Cache
+      SubnetIds:
+        - !ImportValue 'Subnet1'
+        - !ImportValue 'Subnet2'
+
+  CacheCluster:
+    Type: 'AWS::ElastiCache::CacheCluster'
+    Properties:
+      CacheNodeType: 'cache.t2.micro'
+      CacheSubnetGroupName: !Ref SubnetGroup
+      Engine: 'redis'
+      NumCacheNodes: 1
+      Port: 6379
+      VpcSecurityGroupIds:
+        - !GetAtt 
+          - SecurityGroup
+          - GroupId
+
+
+Outputs:
+  RGEndpoint:
+    Description: The primary endpoint location
+    Value: !Join 
+      - ''
+      - - 'redis://'
+        - !GetAtt 
+          - CacheCluster
+          - RedisEndpoint.Address
+        - ':'
+        - !GetAtt 
+          - CacheCluster
+          - RedisEndpoint.Port

@@ -13,10 +13,20 @@ services:
     volumes:
       - ./static-server:/usr/share/nginx/html:ro
   proxy-server:
-    build: ./proxy-server
+    image: nginx
+    volumes:
+      - ./proxy-server/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "80:80"
     depends_on:
       - pythonflask
       - static-server
-    
+  
+  #proxy-server:
+  #  build: ./proxy-server
+  #  ports:
+  #    - "80:80"
+  #  depends_on:
+  #    - pythonflask
+  #    - static-server
+  
