@@ -37,7 +37,7 @@ Resources:
 
 
 Outputs:
-  RGEndpoint:
+  ECRedisEndpoint:
     Description: The primary endpoint location
     Value: !Join 
       - ''
@@ -49,3 +49,15 @@ Outputs:
         - !GetAtt 
           - CacheCluster
           - RedisEndpoint.Port
+
+  RedisHost:
+    Description: Redis Host of elastic cache
+    Value: !GetAtt CacheCluster.RedisEndpoint.Address
+    Export:
+      Name: 'ECRedisHost'
+
+  RedisPort:
+    Description: Redis Port for Elastic cache
+    Value: !GetAtt CacheCluster.RedisEndpoint.Port
+    Export:
+      Name: 'ECRedisPort'

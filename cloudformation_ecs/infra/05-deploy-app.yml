@@ -15,7 +15,7 @@ Resources:
       ExecutionRoleArn: !ImportValue ECSTaskExecutionRole
       ContainerDefinitions:
         - Name: static-server
-          Image: carpio701021/trambo-training-static
+          Image: carpio701021/trambo-training-static:latest
           Cpu: 256
           Memory: 512
           PortMappings:
@@ -35,18 +35,52 @@ Resources:
       TaskDefinition: !Ref TaskStaticServer
       Cluster: !ImportValue 'ECSCluster'
       LaunchType: FARGATE
-      DesiredCount: 2
+      DesiredCount: 1
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 70
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
           Subnets:
             - !ImportValue Subnet1
             - !ImportValue Subnet2
           SecurityGroups:
             - !ImportValue ContainerSecurityGroup
+      LoadBalancers:
+        - ContainerName: static-server
+          ContainerPort: 80
+          TargetGroupArn: !Ref StaticTargetGroup
+
+  StaticTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: static-trambo-tg
+      VpcId: !ImportValue VPC
+      Port: 80
+      Protocol: HTTP
+      Matcher:
+        HttpCode: 200-299
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /stat/index.html
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 10
+      TargetType: ip
+
+  StaticListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !ImportValue InternalListener80
+      Priority: 3
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /*
+      Actions:
+        - TargetGroupArn: !Ref StaticTargetGroup
+          Type: forward
+
 
   TaskPythonflask:
     Type: AWS::ECS::TaskDefinition
@@ -60,11 +94,16 @@ Resources:
       ExecutionRoleArn: !ImportValue ECSTaskExecutionRole
       ContainerDefinitions:
         - Name: pythonflask
-          Image: carpio701021/trambo-training-pythonflask
+          Image: carpio701021/trambo-training-pythonflask:latest
           Cpu: 256
           Memory: 512
+          Environment:
+            - Name: REDIS_HOST
+              Value: !ImportValue ECRedisHost
+            - Name: REDIS_PORT
+              Value: !ImportValue ECRedisPort
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: 5000
               Protocol: tcp
           LogConfiguration:
             LogDriver: awslogs
@@ -81,18 +120,52 @@ Resources:
       TaskDefinition: !Ref TaskPythonflask
       Cluster: !ImportValue 'ECSCluster'
       LaunchType: FARGATE
-      DesiredCount: 2
+      DesiredCount: 1
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 70
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
           Subnets:
             - !ImportValue Subnet1
             - !ImportValue Subnet2
           SecurityGroups:
             - !ImportValue ContainerSecurityGroup
+      LoadBalancers:
+        - ContainerName: pythonflask
+          ContainerPort: 5000
+          TargetGroupArn: !Ref AppTargetGroup
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: app-trambo-tg
+      VpcId: !ImportValue VPC
+      Port: 5000
+      Protocol: HTTP
+      Matcher:
+        HttpCode: 200-299
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /stat
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 10
+      TargetType: ip
+
+  AppListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !ImportValue InternalListener5000
+      Priority: 2
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /*
+      Actions:
+        - TargetGroupArn: !Ref AppTargetGroup
+          Type: forward
+
 
 
   TaskProxyServer:
@@ -107,9 +180,16 @@ Resources:
       ExecutionRoleArn: !ImportValue ECSTaskExecutionRole
       ContainerDefinitions:
         - Name: proxy-server
-          Image: carpio701021/trambo-training-proxy
+          Image: carpio701021/trambo-training-proxy:latest
           Cpu: 256
           Memory: 512
+          Environment:
+            - Name: APP_ENDPOINT
+              #Value: localhost:5000
+              Value: !Join ['', ['', !ImportValue InternalDomainName, ':5000']]
+            - Name: STATIC_ENDPOINT
+              #Value: localhost:80
+              Value: !Join ['', ['', !ImportValue InternalDomainName, ':80']]
           PortMappings:
             - ContainerPort: 80
               Protocol: tcp
@@ -131,7 +211,7 @@ Resources:
       TaskDefinition: !Ref TaskProxyServer
       Cluster: !ImportValue 'ECSCluster'
       LaunchType: FARGATE
-      DesiredCount: 2
+      DesiredCount: 1
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 70
@@ -168,7 +248,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       ListenerArn: !ImportValue Listener
-      Priority: 2
+      Priority: 1
       Conditions:
         - Field: path-pattern
           Values:
