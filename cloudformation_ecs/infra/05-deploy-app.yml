@@ -52,36 +52,6 @@ Resources:
           ContainerPort: 80
           TargetGroupArn: !Ref StaticTargetGroup
 
-  StaticTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: static-trambo-tg
-      VpcId: !ImportValue VPC
-      Port: 80
-      Protocol: HTTP
-      Matcher:
-        HttpCode: 200-299
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /stat/index.html
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 10
-      TargetType: ip
-
-  StaticListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn: !ImportValue InternalListener80
-      Priority: 3
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - /*
-      Actions:
-        - TargetGroupArn: !Ref StaticTargetGroup
-          Type: forward
-
-
   TaskPythonflask:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -114,7 +84,7 @@ Resources:
 
   ServicePythonflask:
     Type: AWS::ECS::Service
-    DependsOn: ListenerRule
+    DependsOn: AppListenerRule
     Properties:
       ServiceName: pythonflask-service
       TaskDefinition: !Ref TaskPythonflask
@@ -153,98 +123,23 @@ Resources:
       HealthyThresholdCount: 10
       TargetType: ip
 
-  AppListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn: !ImportValue InternalListener5000
-      Priority: 2
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - /*
-      Actions:
-        - TargetGroupArn: !Ref AppTargetGroup
-          Type: forward
-
-
-
-  TaskProxyServer:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: apis
-      Cpu: 256
-      Memory: 512
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-      ExecutionRoleArn: !ImportValue ECSTaskExecutionRole
-      ContainerDefinitions:
-        - Name: proxy-server
-          Image: carpio701021/trambo-training-proxy:latest
-          Cpu: 256
-          Memory: 512
-          Environment:
-            - Name: APP_ENDPOINT
-              #Value: localhost:5000
-              Value: !Join ['', ['', !ImportValue InternalDomainName, ':5000']]
-            - Name: STATIC_ENDPOINT
-              #Value: localhost:80
-              Value: !Join ['', ['', !ImportValue InternalDomainName, ':80']]
-          PortMappings:
-            - ContainerPort: 80
-              Protocol: tcp
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: 'apis'
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: 'proxy-server'
-
-  ServiceProxyServer:
-    Type: AWS::ECS::Service
-    DependsOn: 
-      - TaskPythonflask
-      - TaskStaticServer
-      - ListenerRule
-    Properties:
-      ServiceName: proxy-server-service
-      TaskDefinition: !Ref TaskProxyServer
-      Cluster: !ImportValue 'ECSCluster'
-      LaunchType: FARGATE
-      DesiredCount: 1
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 70
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
-          Subnets:
-            - !ImportValue Subnet1
-            - !ImportValue Subnet2
-          SecurityGroups:
-            - !ImportValue ContainerSecurityGroup
-      LoadBalancers:
-        - ContainerName: proxy-server
-          ContainerPort: 80
-          TargetGroupArn: !Ref TargetGroup
-
-  TargetGroup:
+  StaticTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: trambo-tg
+      Name: static-trambo-tg
       VpcId: !ImportValue VPC
       Port: 80
       Protocol: HTTP
       Matcher:
         HttpCode: 200-299
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /stat
+      HealthCheckPath: /stat/index.html
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 10
       TargetType: ip
 
-  ListenerRule:
+  AppListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       ListenerArn: !ImportValue Listener
@@ -252,9 +147,22 @@ Resources:
       Conditions:
         - Field: path-pattern
           Values:
+            - /api/*
+      Actions:
+        - TargetGroupArn: !Ref AppTargetGroup
+          Type: forward
+
+  StaticListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !ImportValue Listener
+      Priority: 2
+      Conditions:
+        - Field: path-pattern
+          Values:
             - /*
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref StaticTargetGroup
           Type: forward
 
 

@@ -28,36 +28,6 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref DefaultTargetGroup
 
-  InternalLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: ecs-services-internal
-      Subnets:
-        - !ImportValue 'Subnet1'
-        - !ImportValue 'Subnet2'
-      SecurityGroups:
-        - !Ref LoadBalancerSecurityGroup
-
-  InternalLoadBalancerListener80:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      LoadBalancerArn: !Ref InternalLoadBalancer
-      Protocol: HTTP
-      Port: 80
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref DefaultTargetGroup80
-
-  InternalLoadBalancerListener5000:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      LoadBalancerArn: !Ref InternalLoadBalancer
-      Protocol: HTTP
-      Port: 5000
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref DefaultTargetGroup5000
-
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -74,22 +44,6 @@ Resources:
       VpcId: !ImportValue 'VPC'
       Protocol: 'HTTP'
       Port: '80'  
-
-  DefaultTargetGroup80:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: default-internal-80
-      VpcId: !ImportValue 'VPC'
-      Protocol: 'HTTP'
-      Port: '80'  
-
-  DefaultTargetGroup5000:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: default-internal-5000
-      VpcId: !ImportValue 'VPC'
-      Protocol: 'HTTP'
-      Port: '5000'  
 
   CloudWatchLogsGroup:
     Type: AWS::Logs::LogGroup
@@ -120,18 +74,6 @@ Outputs:
     Export:
       Name: 'Listener'
 
-  InternalListener80:
-    Description: listener port 80 internal
-    Value: !Ref InternalLoadBalancerListener80
-    Export:
-      Name: 'InternalListener80'
-
-  InternalListener5000:
-    Description: listener port 5000 internal
-    Value: !Ref InternalLoadBalancerListener5000
-    Export:
-      Name: 'InternalListener5000'
-
   ContainerSecurityGroup:
     Description: container security group
     Value: !Ref ContainerSecurityGroup
@@ -143,10 +85,3 @@ Outputs:
     Value: !GetAtt LoadBalancer.DNSName
     Export:
       Name: 'DomainName'
-
-  InternalLoadBalancerDNS:
-    Description: Domain name for the internal loadbalancer
-    Value: !GetAtt InternalLoadBalancer.DNSName
-    Export:
-      Name: 'InternalDomainName'
-
