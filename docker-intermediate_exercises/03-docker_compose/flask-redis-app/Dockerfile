@@ -8,4 +8,8 @@ RUN apk-install python \
     python-dev \
     py-pip &&\
     pip install -r requirements.txt
+
+ENV REDIS_HOST redis
+ENV REDIS_PORT 6379
+
 CMD ["python", "app.py"]

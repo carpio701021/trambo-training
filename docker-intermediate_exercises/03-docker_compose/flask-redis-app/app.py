@@ -5,8 +5,17 @@ from redis import Redis
 import json 
 import os, socket
 
+REDIS_HOST = os.environ.get('REDIS_HOST')
+REDIS_PORT = os.environ.get('REDIS_PORT')
+print REDIS_HOST
+print REDIS_PORT
+
 app = Flask(__name__)
-redis = Redis(host="redis", port=6379)
+redis = Redis(host=REDIS_HOST, port=REDIS_PORT)
+
+@app.route('/stat')
+def stat():
+    return ('It is ok')
 
 @app.route('/api')
 def hello():
